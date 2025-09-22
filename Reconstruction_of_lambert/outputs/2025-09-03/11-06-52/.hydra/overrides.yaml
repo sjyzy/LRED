@@ -1,0 +1,5 @@
+- refine=True
+- model.path=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train/experiments/server_2025-09-03_00-36-35_train_lama-fourier_/
+- model.checkpoint=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train/experiments/server_2025-09-03_00-36-35_train_lama-fourier_/models/last.ckpt
+- indir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/inpaint_specular2
+- outdir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/lama_output3

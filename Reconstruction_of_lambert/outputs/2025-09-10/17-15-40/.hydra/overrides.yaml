@@ -1,0 +1,4 @@
+- refine=True
+- model.path=/nas_data/SJY/code/depth_estimation/lama-main/big-lama
+- indir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/inpaint_specular2/colon10k
+- outdir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/lama_output2

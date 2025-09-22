@@ -1,0 +1,10 @@
+# data_root_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train/C3VD_ori
+# out_root_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train/experiments
+# tb_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train/tb_logs
+# pretrained_models: /nas_data/SJY/code/depth_estimation/lama-main
+# img_suffix: .png
+
+data_root_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train_inp/C3VD_inpaint
+out_root_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train_inp/experiments
+tb_dir: /nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/lama_train_inp/tb_logs
+pretrained_models: /nas_data/SJY/code/depth_estimation/lama-main

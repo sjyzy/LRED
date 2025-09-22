@@ -1,0 +1,3 @@
+- refine=True
+- indir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/inpaint_specular2
+- outdir=/nas_data/ARIS_Public/dataset/DepthEstimation/C3VD/musk/lama_output3

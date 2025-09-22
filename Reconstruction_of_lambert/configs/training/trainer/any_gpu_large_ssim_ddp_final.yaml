@@ -1,0 +1,27 @@
+# @package _group_
+kwargs:
+  accelerator: gpu          # 旧的 accelerator: ddp -> 用 strategy 指定分布式
+  devices: -1               # 旧的 gpus: -1
+  strategy: ddp_find_unused_parameters_true             
+  max_epochs: 40
+  gradient_clip_val: 0
+  # log_gpu_memory 在 PL 2.x 已移除；如需排查显存，建议改成 profiler 或手动记录
+  limit_train_batches: 10014
+  limit_val_batches: 0 
+  val_check_interval:  566 #${trainer.kwargs.limit_train_batches/8}   # 每 25000 个训练 batch 验证一次（等价原逻辑）
+  log_every_n_steps: 250
+  precision: 32            # 也可用 "16-mixed"/"bf16-mixed" 等
+  # resume_from_checkpoint 已在 2.x 移除；要恢复需在 fit(..., ckpt_path=...) 传
+  # terminate_on_nan 在 2.x 不再支持；必要时可用 detect_anomaly=True 或在数据侧拦截
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: 0
+  # replace_sampler_ddp 在 2.x 已移除；PL 会自动处理分布式采样
+
+checkpoint_kwargs:
+  verbose: true
+  save_top_k: 5
+  save_last: true
+  every_n_epochs: 1        # ← 用这个替代 period: 1
+  monitor: val_ssim_fid100_f1_total_mean
+  mode: max
+  # filename: "{epoch:03d}-{val_ssim_fid100_f1_total_mean:.4f}"  # 可选：自定义文件名
