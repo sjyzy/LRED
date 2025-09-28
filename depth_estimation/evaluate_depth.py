@@ -11,21 +11,21 @@ from torch.utils.data import DataLoader
 from options2 import MonodepthOptions
 from datasets import C3VD_Dataset
 
-# 与 Trainer / ppstest 一致的实现
+
 from networks.PPSNet import PPSNet_Backbone, PPSNet_Refinement
 
 import optical_flow_funs as OF
 from scipy.optimize import leastsq
 
-# 新增：保存可视化所需
+
 import matplotlib
-matplotlib.use('Agg')  # 无显示环境也能保存
+matplotlib.use('Agg')  
 import matplotlib.pyplot as plt
 
 cv2.setNumThreads(0)
 splits_dir = os.path.join(os.path.dirname(__file__), "splits")
 
-# -------------------- PFM 工具 & 误差图 --------------------
+
 def save_pfm(filename, image, scale=1):
     image = np.flipud(image).astype(np.float32, copy=False)
     if image.ndim == 2:
@@ -48,7 +48,7 @@ def rel_percent_depth_difference_map(depth_gt, depth_est):
     depth_gt = np.clip(depth_gt, a_min=1e-6, a_max=None)
     return ((depth_gt - depth_est) / depth_gt) * 100.0
 
-# -------------------- 列表与 dataloader --------------------
+
 def _read_c3vd_scene_list(list_path):
     if not os.path.isfile(list_path):
         raise FileNotFoundError(f"Scene list not found: {list_path}")
@@ -78,7 +78,7 @@ def _build_c3vd_dataloader(opt):
     return DataLoader(dataset, batch_size=16, shuffle=False,
                       num_workers=opt.num_workers, pin_memory=True, drop_last=False)
 
-# -------------------- PPSNet 指标工具 --------------------
+
 def scale_predictions_lmeds(gt_vec, est_vec):
     gt_flat = gt_vec.reshape(-1).astype(np.float64)
     est_flat = est_vec.reshape(-1).astype(np.float64)
@@ -96,7 +96,7 @@ def scale_predictions_lmeds(gt_vec, est_vec):
         s_opt = np.median(gt_v / np.maximum(est_v, 1e-12))
     return est_vec * s_opt
 
-# -------------------- 权重加载：单文件 ckpt 或 分文件 pth --------------------
+
 def strip_module(sd):
     return {(k[7:] if isinstance(k, str) and k.startswith("module.") else k): v for k, v in sd.items()}
 
@@ -112,7 +112,7 @@ def load_pps_weights(backbone, refine, opt):
             r_sd = strip_module(r_sd)
             refine.load_state_dict(r_sd, strict=True)
         else:
-            print("[warn] ckpt 中没有 refiner_state_dict，refine 将保持随机初始化")
+            print("[warn] ckpt no refiner_state_dict，refine")
         return
     assert getattr(opt, "load_weights_folder", None), "Neither --pps_pretrained_ckpt nor --load_weights_folder provided."
     folder = os.path.expanduser(opt.load_weights_folder)
@@ -135,7 +135,7 @@ def load_pps_weights(backbone, refine, opt):
 
 # -------------------- 主评估流程 --------------------
 def evaluate(opt):
-    assert opt.eval_split.lower() == "c3vd", "此脚本仅用于 C3VD 评估（--eval_split c3vd）"
+    assert opt.eval_split.lower() == "c3vd", "--eval_split c3vd"
 
     MIN_DEPTH, MAX_DEPTH = 1e-6, 1.0
     DEPTH_SCALE = 65535.0 * 0.000001525
@@ -143,11 +143,11 @@ def evaluate(opt):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # 1) DataLoader
+  
     dataloader = _build_c3vd_dataloader(opt)
-    dataset = dataloader.dataset  # 用于拿 filenames，顺序与 dataloader (shuffle=False) 一致
+    dataset = dataloader.dataset 
 
-    # 2) 构建与加载 PPSNet
+
     print("-> Building PPSNet backbone/refine (vits/14)")
     backbone = PPSNet_Backbone.from_pretrained('LiheYoung/depth_anything_vits14').to(device).eval()
     token_dim = backbone.pretrained.blocks[0].attn.qkv.in_features
@@ -155,7 +155,7 @@ def evaluate(opt):
                                feature_dim=token_dim, heads=8).to(device).eval()
     load_pps_weights(backbone, refine, opt)
 
-    # outputs root
+  
     outputs_root = None
     if hasattr(opt, "log_dir") and opt.log_dir:
         outputs_root = os.path.join(opt.log_dir, "pps_eval_outputs")
@@ -171,7 +171,7 @@ def evaluate(opt):
     for d in [img_dir, gt_dir, pred_dir, errm_dir]:
         os.makedirs(d, exist_ok=True)
 
-    # 3) 推理 (518x518)
+
     print("-> Running inference (518x518, ppstest-aligned)...")
     pred_disps = []
 
@@ -232,52 +232,52 @@ def evaluate(opt):
 
     pred_disps = np.concatenate(pred_disps, axis=0)
 
-    # 可选保存 disparity
+  
     if opt.save_pred_disps:
         out_path = os.path.join(opt.load_weights_folder or ".", f"disps_{opt.eval_split}.npy")
         print("-> Saving predicted disparities to", out_path)
         np.save(out_path, pred_disps)
 
-    # 4) 后处理、指标计算并保存（保留原始路径结构）
+   
     print("-> PPSNet-style evaluation + saving outputs (preserve original folder structure)")
     abs_rel_list, sq_rel_list, rmse_list, rmse_log_list, a1_list = [], [], [], [], []
 
-    # 获得 dataset 原始文件列表（按顺序）
+  
     if hasattr(dataset, "images"):
         filenames = dataset.images
     else:
-        # 回退：尝试 dataset.image_paths 或 dataset.files
+       
         filenames = getattr(dataset, "image_paths", None) or getattr(dataset, "files", None)
         if filenames is None:
             raise RuntimeError("Dataset does not expose 'images' list; please modify C3VD_Dataset to keep list in .images")
 
-    # 重新用 dataloader 遍历以得到 GT/ mask（顺序一致）
+   
     dataloader = _build_c3vd_dataloader(opt)
 
     H_eval = W_eval = 384
     ptr = 0
-    global_idx = 0  # 对齐 filenames
+    global_idx = 0  
     for data in dataloader:
         B = data['image'].shape[0]
         disps_b = pred_disps[ptr:ptr+B]; ptr += B
         imgs_b = data['image'].numpy()
 
         for b in range(B):
-            # 使用 filenames[global_idx] 作为原始路径参考
+           
             img_path = filenames[global_idx]
             global_idx += 1
 
-            # 生成相对路径（相对于 data_path），并用来构建子目录结构
+          
             try:
                 rel_path = os.path.relpath(img_path, opt.data_path)
             except Exception:
-                # 若 img_path 不是在 data_path 下，直接使用文件名的父目录作为相对路径
+                
                 rel_path = os.path.basename(os.path.dirname(img_path)) + os.path.sep + os.path.basename(img_path)
 
-            rel_dir = os.path.dirname(rel_path)  # 可以为空字符串
+            rel_dir = os.path.dirname(rel_path)  
             base_name = os.path.splitext(os.path.basename(img_path))[0]
 
-            # 保存目录（保持原始相对目录结构）
+        
             d_img  = os.path.join(img_dir,  rel_dir);  os.makedirs(d_img,  exist_ok=True)
             d_gt   = os.path.join(gt_dir,   rel_dir);  os.makedirs(d_gt,   exist_ok=True)
             d_pred = os.path.join(pred_dir, rel_dir);  os.makedirs(d_pred, exist_ok=True)
@@ -298,14 +298,14 @@ def evaluate(opt):
 
             valid = (mask_resized > 0.5) & (gt_resized > MIN_DEPTH) & (gt_resized < MAX_DEPTH)
 
-            # 保存输入图（384）
-            img_vis = imgs_b[b]  # [3,H0,W0], values in [0,1]
+    
+            img_vis = imgs_b[b] 
             img_vis = np.transpose(img_vis, (1, 2, 0)).astype(np.float32)
             img_vis_384 = cv2.resize(img_vis, (W_eval, H_eval), interpolation=cv2.INTER_CUBIC)
             img_vis_384 = np.clip(img_vis_384, 0.0, 1.0)
             plt.imsave(os.path.join(d_img, f"{base_name}.png"), img_vis_384)
 
-            # 映射到米制并做 LMedS（在有效区域拟合尺度，然后保存全图）
+       
             gt_m_full   = gt_resized * DEPTH_SCALE
             pred_m_full = pred_resized * DEPTH_SCALE
             if np.any(valid):
@@ -327,14 +327,14 @@ def evaluate(opt):
                 abs_rel_list.append(abs_rel); sq_rel_list.append(sq_rel)
                 rmse_list.append(rmse); rmse_log_list.append(rmse_log); a1_list.append(a1)
 
-            # 保存 GT / Pred (pfm + png)
+
             save_pfm(os.path.join(d_gt,   f"{base_name}.pfm"),   gt_m_full.astype(np.float32))
             plt.imsave(os.path.join(d_gt, f"{base_name}.png"),   gt_m_full, cmap='jet')
 
             save_pfm(os.path.join(d_pred, f"{base_name}.pfm"),   pred_m_scaled.astype(np.float32))
             plt.imsave(os.path.join(d_pred, f"{base_name}.png"), pred_m_scaled, cmap='jet')
 
-            # 保存误差百分比图
+           
             err_percent = rel_percent_depth_difference_map(gt_m_full, pred_m_scaled)
             plt.figure()
             plt.imshow(err_percent, cmap='coolwarm', vmin=-100, vmax=100)
